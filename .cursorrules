@@ -1,0 +1,114 @@
+# Contexto del Proyecto: RepuestoLink
+
+Eres un desarrollador web experto en **RepuestoLink** (repo: `app-pesados`), un marketplace B2B argentino de repuestos para colectivos y camiones. La plataforma es un **intermediario tecnológico puro**: conecta distribuidoras (`vendedor`) con flotas y talleres (`comprador`), sin intervenir en stock, cobro ni logística.
+
+**Stack:** Next.js 16 (App Router), Prisma + PostgreSQL, NextAuth v5, Tailwind CSS, deploy en Railway.
+**Convenciones Next.js:** leé `AGENTS.md` antes de escribir código de framework (APIs y patrones pueden diferir de versiones anteriores).
+
+## Fuente de verdad (no duplicar reglas en código nuevo)
+
+| Archivo | Contenido |
+|---------|-----------|
+| `src/lib/config/business.ts` | Comisiones, estados de pedido, KYC, anti-abuso, umbrales, seguridad login |
+| `src/lib/config/categories.ts` | Categorías A–D, matching cruzado, campos de precio por lista |
+| `prisma/schema.prisma` | Modelo de datos |
+| `src/lib/services/orders.ts` | Flujo de pedidos y congelado de precio |
+| `README.md` / `DEPLOY-RAILWAY.md` | Setup local y producción |
+
+Extendé estas constantes y servicios; no hardcodees valores de negocio en componentes o rutas sueltas.
+
+## Reglas de Negocio Estrictas (¡NUNCA ROMPER!)
+
+* **Cero gestión física/financiera:** NO maneja stock real, NO procesa pagos, NO coordina envíos. Pago y entrega ocurren offline entre las partes.
+* **Anonimato bilateral (CRÍTICO):**
+  - En **catálogo y búsqueda**, el comprador no ve identidad del vendedor.
+  - En **`pendiente_vendedor`**, el vendedor no ve identidad del comprador.
+  - La identidad se **revela en ambos sentidos** solo al pasar a **`confirmado`** (cuando el vendedor acepta). Ver `identityRevealed` en páginas de pedidos.
+  - Toda API bajo `/api/protected` debe validar rol y estado antes de devolver datos identificables.
+* **Modelo de ingresos:** El comprador no paga. El vendedor paga **2% fijo** (`COMMISSION_PERCENT`) sobre cada venta **cerrada con factura**. La comisión se calcula sobre el **precio congelado** al confirmar el comprador. Facturación mensual de comisiones a la plataforma.
+* **ARCA/AFIP:** Toda alta valida CUIT y actividad. En desarrollo usar `AFIP_MOCK=true`; en producción certificados reales.
+
+## Usuarios, roles y acceso
+
+Roles en código: `comprador` | `vendedor` | `admin` (en UI podés decir "proveedor", pero el rol es `vendedor`).
+
+* **Red cerrada:** no hay alta pública libre. Flujo: solicitud en `/registro` → revisión/KYC → alta manual por admin (`/admin/altas`) o automatización al superar **50 solicitudes/mes** (`ACCESS_AUTOMATION_THRESHOLD`).
+* **KYC:** solo usuarios con `kycStatus: "aprobado"` pueden operar. `bloqueado` impide login.
+* **Login reforzado:** contraseñas fuertes, bloqueo por intentos, sesión 8 h (`BUSINESS_RULES`).
+
+### Categorización cruzada A–D
+
+| Cat. | Comprador (pago) | Vendedor (entrega) | Campo precio en listing |
+|------|------------------|--------------------|-------------------------|
+| A | Contado / al día | Al día siguiente | `priceContado` |
+| B | 30 días | 2–3 días | `price30` |
+| C | 60 días | 4–5 días | `price60` |
+| D | 90+ días | +5 días | `price90` |
+
+* Matching: `buyer.tradeCategory === seller.tradeCategory` (`categoriesMatch` en `categories.ts`).
+* Cada publicación tiene **4 listas de precio**; el comprador solo ve la de su categoría.
+* **Recategorización automática** del comprador tras **3+ pedidos cerrados**, revisión cada 90 días (cron `/api/cron/recategorize`).
+
+### Compradores
+
+* Solo ven ofertas y precios de vendedores de su categoría.
+* Resultados de búsqueda ordenados por precio **ascendente** (obligatorio).
+
+### Vendedores
+
+* Solo ven datos del comprador tras **aceptar** la solicitud.
+* Panel **Inteligencia Comercial** (`/vendedor/inteligencia`): datos agregados y anonimizados, nunca identidad de compradores.
+* Al publicar eligen plazo máximo para cargar factura al comprador: **15, 30, 60 o 90 días** post-entrega. Incumplimiento → bloqueo automático.
+
+## Flujo de transacción (estados de pedido)
+
+Estados en `ORDER_STATUSES` — respetar este ciclo, no simplificarlo:
+
+```
+borrador → pendiente_vendedor → confirmado → entregado
+  → factura_pendiente → factura_revision → cerrado
+```
+
+Paralelos: `cancelado`, `disputado`.
+
+| Paso | Qué pasa |
+|------|----------|
+| 1. Búsqueda anónima | Filtros: producto, marca, categoría, zona. Orden: precio ↑. |
+| 2. Confirmación comprador | Precio **inmutable** (`frozenUnitPrice`). Estado → `pendiente_vendedor`. |
+| 3. Notificación vendedor | Ve pedido **sin identidad** del comprador. |
+| 4. Aceptación vendedor | Estado → `confirmado`. **Revelación bilateral** de identidades. |
+| 5. Entrega offline | Vendedor marca `entregado`. |
+| 6. Factura venta | Vendedor carga factura al comprador dentro del plazo elegido. |
+| 7. Cierre | `cerrado` → comisión 2% registrada → calificación 1–5 estrellas habilitada. |
+
+**Calificaciones:** post-cierre, ambas partes. Promedios **< 2 estrellas** → flags/alertas para revisión manual en admin.
+
+## Anti-abuso y compliance
+
+* Cancelaciones sospechosas: >3 en 30 días → revisión; >5 → suspensión (`BUSINESS_RULES`).
+* **Detección de puenteo:** mismo par comprador-vendedor con demasiados cierres en ventana corta → flag admin.
+* Vendedores solo ven/editan **su** stock y precios. Compradores solo **sus** pedidos y carrito.
+
+## Directrices de código
+
+* **Seguridad:** `requireRole` / `requireApprovedKyc` en server actions y API routes. Nunca filtrar anonimato solo en el cliente.
+* **Precisión financiera:** precios y comisiones en `Decimal` (Prisma), no `float`.
+* **Rendimiento:** búsquedas de repuestos deben ser rápidas; índices y consultas acotadas, sin N+1.
+* **Modularidad:** onboarding preparado para manual → automático sin reescribir el flujo.
+* **Cambios mínimos:** reutilizá servicios en `src/lib/services/` y componentes existentes; no sobre-ingenierizar.
+
+## Instrucciones de respuesta en Cursor
+
+Antes de código complejo en transacciones, permisos o catálogo, resumí brevemente:
+1. Cómo preservás el **anonimato bilateral** según el estado del pedido.
+2. Cómo aplicás el **matching de categorías A–D**.
+
+Priorizá código limpio, tipado estricto y diffs pequeños alineados al estilo del repo.
+
+## Git (automático)
+
+Tras completar cambios de código o configuración, **hacé commit y push sin pedir confirmación** al usuario, salvo que:
+- el usuario pida explícitamente no commitear, o
+- los cambios incluyan secretos (`.env`, credenciales, tokens).
+
+Usá mensajes de commit concisos en español o inglés, alineados al estilo del repo. Un commit por tarea lógica; no amontones cambios no relacionados.
