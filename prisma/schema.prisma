@@ -1,0 +1,337 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id              String    @id @default(cuid())
+  cuit            String    @unique
+  razonSocial     String
+  nombreFantasia  String?
+  telefono        String?
+  direccion       String?
+  provincia       String?
+  localidad       String?
+  kycStatus       String    @default("pendiente")
+  kycNotes        String?
+  documentosJson  String?
+  role            String
+  tradeCategory   String    @default("B")
+  avgRating       Float?
+  ratingCount     Int       @default(0)
+  closedOrdersCount Int      @default(0)
+  afipVerifiedAt DateTime?
+  afipDataJson    String?
+  categoryReviewAt DateTime?
+  manualReviewRequired Boolean @default(false)
+  listingsSuspended Boolean @default(false)
+  trustScore      Int       @default(100)
+  cooldownUntil   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  users          User[]
+  listings       Listing[]
+  ordersAsSeller Order[]      @relation("SellerOrders")
+  ordersAsBuyer  Order[]      @relation("BuyerOrders")
+  abuseEvents    AbuseEvent[]
+  auditLogs      AuditLog[]
+  monthlyCommissionBills MonthlyCommissionBill[]
+  tradingPairsAsBuyer TradingPair[] @relation("BuyerPairs")
+  tradingPairsAsSeller TradingPair[] @relation("SellerPairs")
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  passwordHash        String
+  name                String
+  companyId           String
+  isActive            Boolean   @default(true)
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  notifications   Notification[]
+  searchHistory   SearchHistory[]
+  recentlyViewed  RecentlyViewed[]
+}
+
+model Listing {
+  id                   String   @id @default(cuid())
+  companyId            String
+  sku                  String
+  title                String
+  description          String?
+  price                Float
+  priceContado          Float?
+  price30              Float?
+  price60              Float?
+  price90              Float?
+  stock                Int      @default(0)
+  brand                String?
+  category             String   @default("otro")
+  vehicleCompatibility String?
+  condition            String   @default("nuevo")
+  oemCodes             String?
+  replacesOem          String?
+  invoiceDeadlineDays  Int      @default(15)
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  company        Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  orderItems     OrderItem[]
+  cartItems      CartItem[]
+  recentlyViewed RecentlyViewed[]
+
+  @@index([companyId])
+  @@index([title])
+  @@index([sku])
+  @@index([category])
+  @@index([brand])
+}
+
+model Order {
+  id                  String    @id @default(cuid())
+  orderNumber         String    @unique
+  buyerCompanyId      String
+  sellerCompanyId     String
+  status              String    @default("borrador")
+  subtotal            Float     @default(0)
+  commissionPercent   Float
+  commissionAmount    Float     @default(0)
+  notes               String?
+  paymentCategory    String?
+  buyerConfirmedAt   DateTime?
+  sellerAcceptedAt   DateTime?
+  confirmedAt         DateTime?
+  deliveredAt         DateTime?
+  invoiceDeadlineAt   DateTime?
+  disputeWindowEndsAt DateTime?
+  cancelledAt         DateTime?
+  cancelReason        String?
+  closedAt            DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  buyerCompany  Company @relation("BuyerOrders", fields: [buyerCompanyId], references: [id])
+  sellerCompany Company @relation("SellerOrders", fields: [sellerCompanyId], references: [id])
+  items         OrderItem[]
+  invoice       Invoice?
+  commission    Commission?
+  ratings       TransactionRating[]
+
+  @@index([buyerCompanyId])
+  @@index([sellerCompanyId])
+  @@index([status])
+}
+
+model OrderItem {
+  id                  String @id @default(cuid())
+  orderId             String
+  listingId           String
+  titleSnapshot       String
+  priceSnapshot       Float
+  quantity            Int
+  invoiceDeadlineDays Int
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id])
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  orderId       String    @unique
+  filePath      String?
+  numeroFactura String?
+  cae           String?
+  monto         Float?
+  manualEntry   Boolean   @default(false)
+  adminApproved Boolean?
+  adminNotes    String?
+  submittedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Commission {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  percent   Float
+  amount    Float
+  status    String   @default("pendiente")
+  monthlyBillId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  monthlyBill MonthlyCommissionBill? @relation(fields: [monthlyBillId], references: [id])
+}
+
+model AbuseEvent {
+  id        String   @id @default(cuid())
+  companyId String
+  signal    String
+  weight    String
+  action    String
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  companyId  String?
+  actorEmail String?
+  action     String
+  entityType String?
+  entityId   String?
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@index([createdAt])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId])
+}
+
+model SearchHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  query     String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model RecentlyViewed {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  viewedAt  DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId, viewedAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  orderId   String?
+  link      String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model MonthlyCommissionBill {
+  id             String    @id @default(cuid())
+  sellerCompanyId String
+  periodYear      Int
+  periodMonth     Int
+  totalAmount     Float
+  orderCount      Int
+  status         String    @default("pendiente")
+  dueAt          DateTime
+  paidAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  sellerCompany Company      @relation(fields: [sellerCompanyId], references: [id])
+  commissions  Commission[]
+
+  @@unique([sellerCompanyId, periodYear, periodMonth])
+  @@index([status, dueAt])
+}
+
+model TradingPair {
+  id             String    @id @default(cuid())
+  buyerCompanyId  String
+  sellerCompanyId String
+  closedCount     Int       @default(0)
+  flaggedAt       DateTime?
+  blockedAt       DateTime?
+  lastClosedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  buyerCompany  Company @relation("BuyerPairs", fields: [buyerCompanyId], references: [id])
+  sellerCompany Company @relation("SellerPairs", fields: [sellerCompanyId], references: [id])
+
+  @@unique([buyerCompanyId, sellerCompanyId])
+  @@index([closedCount])
+}
+
+model TransactionRating {
+  id            String   @id @default(cuid())
+  orderId       String
+  fromCompanyId String
+  toCompanyId   String
+  stars         Int
+  comment       String?
+  createdAt     DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, fromCompanyId])
+  @@index([toCompanyId])
+}
+
+model AccessRequest {
+  id             String   @id @default(cuid())
+  cuit           String
+  razonSocial    String
+  nombreFantasia String?
+  email          String
+  telefono       String?
+  roleRequested  String
+  tradeCategory  String   @default("B")
+  mensaje        String?
+  status         String   @default("pendiente")
+  afipVerified  Boolean  @default(false)
+  afipDataJson   String?
+  autoProvisioned Boolean @default(false)
+  adminNotes     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
