@@ -5,5 +5,5 @@ buildCommand = "npm run build"
 [deploy]
 startCommand = "npx prisma db push --skip-generate && npm run start"
 restartPolicyType = "on_failure"
-healthcheckPath = "/"
+healthcheckPath = "/api/health"
 healthcheckTimeout = 120
