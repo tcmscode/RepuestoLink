@@ -1,5 +1,5 @@
 import { Page, expect } from "@playwright/test";
-import { DEMO_PASSWORD, DEMO_USERS } from "../helpers/constants";
+import { DEMO_PASSWORD, DEMO_USERS } from "../../tests/helpers/constants";
 
 export async function loginAs(
   page: Page,
