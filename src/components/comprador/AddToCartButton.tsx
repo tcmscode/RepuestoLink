@@ -51,6 +51,7 @@ export function AddToCartButton({
         className="flex-1 bg-[#3483fa] hover:bg-[#2968c8]"
         onClick={add}
         disabled={loading || maxStock < 1}
+        data-testid="add-to-cart"
       >
         {loading ? "Agregando..." : "Agregar al carrito"}
       </Button>

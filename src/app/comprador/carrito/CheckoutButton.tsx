@@ -29,7 +29,7 @@ export function CheckoutButton({ sellerCompanyId }: { sellerCompanyId: string })
 
   return (
     <div className="mt-3">
-      <Button size="sm" onClick={checkout} disabled={loading}>
+      <Button size="sm" onClick={checkout} disabled={loading} data-testid="checkout-create-order">
         Crear pedido (borrador)
       </Button>
     </div>

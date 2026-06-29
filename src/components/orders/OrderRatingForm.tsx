@@ -39,6 +39,7 @@ export function OrderRatingForm({
     <form
       onSubmit={submit}
       className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4"
+      data-testid="rating-form"
     >
       <p className="mb-2 text-sm font-medium text-amber-900">
         ¿Cómo fue la experiencia con el {targetLabel}?
@@ -64,7 +65,7 @@ export function OrderRatingForm({
         rows={2}
         maxLength={500}
       />
-      <Button type="submit" size="sm" disabled={loading}>
+      <Button type="submit" size="sm" disabled={loading} data-testid="rating-submit">
         Enviar calificación
       </Button>
     </form>

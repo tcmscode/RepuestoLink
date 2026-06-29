@@ -56,7 +56,7 @@ export function OrderBuyerActions({
     <div className="mt-6 flex flex-wrap gap-2">
       {status === "borrador" && (
         <>
-          <Button onClick={confirm} disabled={loading}>
+          <Button onClick={confirm} disabled={loading} data-testid="confirm-order-intent">
             Confirmar intención de compra
           </Button>
           <Button variant="ghost" onClick={cancel} disabled={loading}>

@@ -34,7 +34,7 @@ export function InvoiceReviewActions({ orderId }: { orderId: string }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-2">
-        <Button size="sm" onClick={() => review("approve")} disabled={loading}>
+        <Button size="sm" onClick={() => review("approve")} disabled={loading} data-testid="admin-approve-invoice">
           Aprobar
         </Button>
         <Button

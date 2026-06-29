@@ -48,6 +48,7 @@ export async function CompradorHeader({
             <NotificationBell />
             <Link
               href="/comprador/carrito"
+              data-testid="nav-cart"
               className="relative flex items-center rounded-md p-1.5 hover:bg-black/5"
               aria-label="Carrito"
             >

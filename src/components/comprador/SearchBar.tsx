@@ -65,6 +65,7 @@ export function SearchBar({
         <input
           type="search"
           value={q}
+          data-testid="search-input"
           onChange={(e) => {
             setQ(e.target.value);
             setOpen(true);
@@ -76,6 +77,7 @@ export function SearchBar({
         />
         <button
           type="submit"
+          data-testid="search-submit"
           className="flex h-10 items-center justify-center rounded-r-md bg-[#ededed] px-4 hover:bg-[#e0e0e0]"
           aria-label="Buscar"
         >

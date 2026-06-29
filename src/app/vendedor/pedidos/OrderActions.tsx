@@ -135,7 +135,7 @@ export function OrderActions({
       <div className="flex flex-wrap gap-2">
         {status === "pendiente_vendedor" && (
           <>
-            <Button size="sm" onClick={acceptOrder} disabled={loading}>
+            <Button size="sm" onClick={acceptOrder} disabled={loading} data-testid="seller-accept-order">
               Aceptar pedido
             </Button>
             <Button
@@ -149,12 +149,12 @@ export function OrderActions({
           </>
         )}
         {status === "confirmado" && identityRevealed && (
-          <Button size="sm" onClick={markDelivered} disabled={loading}>
+          <Button size="sm" onClick={markDelivered} disabled={loading} data-testid="seller-mark-delivered">
             Marcar entregado
           </Button>
         )}
         {status === "factura_pendiente" && !invoiceApproved && (
-          <Button size="sm" variant="secondary" onClick={() => setShowInvoice(!showInvoice)}>
+          <Button size="sm" variant="secondary" onClick={() => setShowInvoice(!showInvoice)} data-testid="seller-upload-invoice">
             Cargar factura
           </Button>
         )}
@@ -164,17 +164,18 @@ export function OrderActions({
       </div>
 
       {showInvoice && (
-        <form onSubmit={submitInvoice} className="mt-2 w-full space-y-2 rounded border p-3">
+        <form onSubmit={submitInvoice} className="mt-2 w-full space-y-2 rounded border p-3" data-testid="invoice-form">
           <input
             name="numeroFactura"
             placeholder="Nº factura"
             required
+            data-testid="invoice-number"
             className="w-full rounded border px-2 py-1 text-sm"
           />
-          <input name="cae" placeholder="CAE (opcional)" className="w-full rounded border px-2 py-1 text-sm" />
-          <input name="monto" type="number" placeholder="Monto" className="w-full rounded border px-2 py-1 text-sm" />
+          <input name="cae" placeholder="CAE (opcional)" data-testid="invoice-cae" className="w-full rounded border px-2 py-1 text-sm" />
+          <input name="monto" type="number" placeholder="Monto" data-testid="invoice-amount" className="w-full rounded border px-2 py-1 text-sm" />
           <input name="file" type="file" accept="image/*,.pdf" className="text-sm" />
-          <Button type="submit" size="sm" disabled={loading}>
+          <Button type="submit" size="sm" disabled={loading} data-testid="invoice-submit">
             Enviar factura
           </Button>
         </form>

@@ -64,7 +64,24 @@ Resumen:
 | vendedor2@apppesados.com | Vendedor |
 | comprador@apppesados.com | Comprador |
 
-## Comisión
+## Tests automáticos (demo gate)
+
+```bash
+docker compose up -d
+cp .env.test.example .env   # o usá tu .env con DATABASE_URL
+
+npm install
+npm run db:push && npm run db:seed
+
+npm run test:unit              # lógica de negocio (rápido)
+npm run test:integration       # flujo pedido + anonimato (requiere Postgres)
+npm run demo:verify            # unit + integration
+npm run demo:verify:full       # + E2E Playwright (build + browser)
+npm run test:e2e               # solo E2E
+```
+
+CI: workflow `.github/workflows/demo-gate.yml` en cada push/PR.
+
 
 **2% fijo** sobre el total de cada venta cerrada con factura cargada (`COMMISSION_PERCENT` en env).
 
