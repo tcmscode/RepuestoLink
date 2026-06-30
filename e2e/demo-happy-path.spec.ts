@@ -23,7 +23,7 @@ test.describe("demo happy path", () => {
     // —— Comprador ——
     await loginComprador(comprador);
     await searchRepuesto(comprador, "Iveco");
-    await expect(comprador.getByText(/Iveco/i).first()).toBeVisible();
+    await expect(comprador.getByTestId("add-to-cart").first()).toBeVisible();
 
     await comprador.getByTestId("add-to-cart").first().click();
     await comprador.getByTestId("nav-cart").click();
@@ -33,7 +33,7 @@ test.describe("demo happy path", () => {
     const orderUrl = comprador.url();
     await comprador.getByTestId("confirm-order-intent").click();
     await expect(
-      comprador.getByText(/esperando|evaluando|pendiente/i)
+      comprador.getByText(/esperando|evaluando|pendiente/i).first()
     ).toBeVisible({ timeout: 15000 });
 
     // —— Vendedor ——

@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = process.env.PORT ?? "3000";
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${PORT}`;
+/** Debe coincidir con NEXTAUTH_URL (NextAuth rechaza cookies si difiere localhost vs 127.0.0.1). */
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -22,14 +23,15 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
     ? undefined
     : {
-        command: process.env.CI ? "npm run build && npm run start" : "npm run dev",
+        command: "npm run start",
         url: `${baseURL}/api/health`,
         reuseExistingServer: !process.env.CI,
         timeout: 180000,
         env: {
           ...process.env,
-          NODE_ENV: "production",
           PORT,
+          NEXTAUTH_URL: baseURL,
+          NODE_ENV: "production",
         },
       },
 });

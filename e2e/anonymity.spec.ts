@@ -27,9 +27,9 @@ test.describe("anonimato bilateral", () => {
     await comprador.getByTestId("checkout-create-order").click();
     await comprador.waitForURL(/\/comprador\/pedidos\//);
     await comprador.getByTestId("confirm-order-intent").click();
-    await expect(comprador.getByText(/esperando|evaluando|pendiente/i)).toBeVisible({
-      timeout: 10000,
-    });
+    await expect(
+      comprador.getByText(/esperando|evaluando|pendiente/i).first()
+    ).toBeVisible({ timeout: 10000 });
 
     await loginVendedor2(vendedor);
     await vendedor.goto("/vendedor/pedidos");

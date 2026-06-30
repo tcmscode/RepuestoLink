@@ -5,16 +5,29 @@
  */
 import { execSync } from "node:child_process";
 import path from "node:path";
+import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
+
+try {
+  loadEnvFile(path.join(root, ".env"));
+} catch {
+  // CI inyecta variables directamente
+}
 const runE2e = process.argv.includes("--e2e");
 const baseUrl = process.env.DEMO_VERIFY_URL ?? "http://127.0.0.1:3000";
 
 function run(cmd, opts = {}) {
   console.log(`\n▶ ${cmd}`);
-  execSync(cmd, { cwd: root, stdio: "inherit", ...opts });
+  const { env: extraEnv, ...rest } = opts;
+  execSync(cmd, {
+    cwd: root,
+    stdio: "inherit",
+    env: { ...process.env, ...extraEnv },
+    ...rest,
+  });
 }
 
 function checkEnv() {
@@ -55,7 +68,13 @@ async function main() {
 
   if (runE2e) {
     run("npm run build");
-    run("npm run test:e2e");
+    run("npm run test:e2e", {
+      env: {
+        ...process.env,
+        NEXTAUTH_URL: process.env.NEXTAUTH_URL ?? "http://localhost:3000",
+        PLAYWRIGHT_BASE_URL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000",
+      },
+    });
   }
 
   console.log("\n✅ DEMO READY — gate automático superado");

@@ -14,4 +14,5 @@ export const SELLER_NAMES = {
   busParts: "BusParts",
 } as const;
 
-export const BUYER_NAME = "Transporte Línea 42";
+export const BUYER_NAME = "Transporte Línea 42 S.A.";
+export const BUYER_DISPLAY = "Línea 42";

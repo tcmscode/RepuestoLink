@@ -26,7 +26,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://apppesados:apppesados@localhost:5432/apppesados?schema=public
       AUTH_SECRET: ci-test-auth-secret-minimum-32-characters
-      NEXTAUTH_URL: http://127.0.0.1:3000
+      NEXTAUTH_URL: http://localhost:3000
       CRON_SECRET: ci-test-cron-secret
       AFIP_MOCK: "true"
       CI: "true"
